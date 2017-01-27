@@ -23,11 +23,15 @@
 #include "Network_Setting.h" //Network settings: ssid & password in separate file
 #include <ESP8266WiFi.h>
 
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h> //https://github.com/marcoschwartz/LiquidCrystal_I2C
+
 /***********  Déclaration des CONSTANTES  *******************************************/
 #define DHT11_PIN 5 //The data I/O pin connected to the DHT11 sensor : GPIO5 = D1 of NodeMCU ESP8266 Board
 
 /***********  Déclaration des variables globales  ***********************************/
 dht DHT;  //Creation de l'objet DHT
+LiquidCrystal_I2C lcd(0x3F,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
 
 WiFiServer server(80); // Create an instance of the server, specify the port to listen on as an argument
 
@@ -41,6 +45,14 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Programme Station Meteo initialisée");
   Serial.println();
+
+  //LCD I2C Initialisation
+  Wire.begin(0,2); // LCD: SDA = D3(GPIO0) ; SCL = D4(GPIO2)
+  lcd.init();                      // initialize the lcd 
+  lcd.backlight();
+  lcd.print("Station meteo");
+  lcd.setCursor(2,1);
+  lcd.print("demarrage ...");
 
   // Set WiFi to station mode and disconnect from an AP if it was previously connected
   WiFi.mode(WIFI_STA);
@@ -89,6 +101,13 @@ void loop() {
   Serial.print(",\t");
   Serial.println(temperature_DHT, 1);
 
+  //Display on LCD I2C
+  lcd.setCursor(2,1);
+  lcd.print(humidity_DHT);
+  lcd.print("% ");
+  lcd.print(temperature_DHT);
+  lcd.print("C       ");
+  
   delay(2000);
 
   // Check if a client has connected

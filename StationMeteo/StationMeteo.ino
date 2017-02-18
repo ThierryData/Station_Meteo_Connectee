@@ -35,6 +35,8 @@ WiFiServer server(80); // Create an instance of the server, specify the port to 
 int humidity_DHT;
 int temperature_DHT;
 
+bool SSID_defined = false;  //define if network is configured
+
 /***********  setup, to run once  ***************************************************/
 void setup() {
   //On ouvre un connexion série pour le terminal
@@ -46,19 +48,51 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   delay(100);
-  // Connexion wifi
-  connectWifi();
-  // Start the server
-  server.begin();
-  Serial.println("Server started");
-  Serial.println();
+  if(SSID_defined){ //Does network configured ?
+    // Connexion wifi
+    connectWifi();
+    // Start the server
+    server.begin();
+    Serial.println("Server started");
+    Serial.println();
+  
+    Serial.print("DHTLib LIBRARY VERSION: ");
+    Serial.println(DHT_LIB_VERSION);
+    Serial.println();
+    Serial.println("Type,\tstatus,\tHumidity (%),\tTemperature (C)");
+  
+    pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+  }
+  else{
+    //Configure Network
+    Serial.println("Network not configured");
+    
+    Serial.println("scan start");
 
-  Serial.print("DHTLib LIBRARY VERSION: ");
-  Serial.println(DHT_LIB_VERSION);
-  Serial.println();
-  Serial.println("Type,\tstatus,\tHumidity (%),\tTemperature (C)");
-
-  pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+    // WiFi.scanNetworks will return the number of networks found
+    int n = WiFi.scanNetworks();
+    Serial.println("scan done");
+    if (n == 0)
+      Serial.println("no networks found");
+    else
+    {
+      Serial.print(n);
+      Serial.println(" networks found");
+      for (int i = 0; i < n; ++i)
+      {
+        // Print SSID and RSSI for each network found
+        Serial.print(i + 1);
+        Serial.print(": ");
+        Serial.print(WiFi.SSID(i));
+        Serial.print(" (");
+        Serial.print(WiFi.RSSI(i));
+        Serial.print(")");
+        Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
+        delay(10);
+      }
+    }
+    Serial.println("");
+  }
 }
 
 /***********  main, run repeatedly **************************************************/

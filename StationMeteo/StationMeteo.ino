@@ -20,11 +20,18 @@
 
 /***********  Ajout de bibliothèque  ************************************************/
 #include <dht.h> //Librairie pour le capteur DHT http://arduino.cc/playground/Main/DHTLib
-#include "Network_Setting.h" //Network settings: ssid & password in separate file
-#include <ESP8266WiFi.h>
+#include <ESP8266WiFi.h>  //ESP8266 Core WiFi Library https://github.com/esp8266/Arduino
+
+#include <DNSServer.h> //Local DNS Server used for redirecting all requests to the configuration portal
+#include <ESP8266WebServer.h> //Local WebServer used to serve the configuration portal
+#include <WiFiManager.h> //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h> //https://github.com/marcoschwartz/LiquidCrystal_I2C
+
+//for LED status
+#include <Ticker.h>
+Ticker ticker;
 
 /***********  Déclaration des CONSTANTES  *******************************************/
 #define DHT11_PIN 5 //The data I/O pin connected to the DHT11 sensor : GPIO5 = D1 of NodeMCU ESP8266 Board
@@ -54,12 +61,27 @@ void setup() {
   lcd.setCursor(2,1);
   lcd.print("demarrage ...");
 
-  // Set WiFi to station mode and disconnect from an AP if it was previously connected
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-  delay(100);
-  // Connexion wifi
-  connectWifi();
+  //set led pin as output
+  pinMode(BUILTIN_LED, OUTPUT);
+  // start ticker with 0.5 because we start in AP mode and try to connect
+  ticker.attach(0.6, tick);
+
+  //WiFiManager
+  WiFiManager wifiManager;
+  //fetches ssid and pass from eeprom and tries to connect
+  //if it does not connect it starts an access point with the specified name
+  //here  "AutoConnect_StationMeteo"
+  //and goes into a blocking loop awaiting configuration
+  wifiManager.autoConnect("AutoConnect_StationMeteo");
+  //or use this for auto generated name ESP + ChipID
+  //wifiManager.autoConnect();
+  
+  //if you get here you have connected to the WiFi
+  Serial.println("connected...yeey :)");
+  ticker.detach();
+  //keep LED on
+  digitalWrite(BUILTIN_LED, LOW);
+  
   // Start the server
   server.begin();
   Serial.println("Server started");
@@ -70,7 +92,6 @@ void setup() {
   Serial.println();
   Serial.println("Type,\tstatus,\tHumidity (%),\tTemperature (C)");
 
-  pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
 }
 
 /***********  main, run repeatedly **************************************************/
@@ -170,35 +191,12 @@ void loop() {
   }
 }
 
-/************************************************************************************/
-/***********  connectWifi ***********************************************************/
-/************************************************************************************/
-void connectWifi() {
-
-  // We start by connecting to a WiFi network
-
-  Serial.print("Connexion au WiFi ");
-  Serial.println(ssid);
-
-  WiFi.begin(ssid, password);   // On se connecte
-
-  int i = 0;
-  while (WiFi.status() != WL_CONNECTED && i < 40) { // On attend max 20 s
-    delay(500);
-    Serial.print(".");
-    i++;
-  }
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("");  // on affiche les paramÃ¨tres
-    Serial.println("WiFi connecté");
-    Serial.print("Adresse IP du module EPC: ");
-    Serial.println(WiFi.localIP());
-    Serial.print("Adresse IP de la box : ");
-    Serial.println(WiFi.gatewayIP());
-  } else {
-    Serial.println("");
-    Serial.println("WiFi Not connected");
-    Serial.println("");
-  }
+/***********  for LED status  **************************************************/
+void tick()
+{
+  //toggle state
+  int state = digitalRead(BUILTIN_LED);  // get the current state of GPIO1 pin
+  digitalWrite(BUILTIN_LED, !state);     // set pin to the opposite state
 }
+
+

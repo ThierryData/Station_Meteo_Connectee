@@ -33,6 +33,8 @@
 #include <Ticker.h>
 Ticker ticker;
 
+#include "ThingSpeak.h"
+
 /***********  Déclaration des CONSTANTES  *******************************************/
 #define DHT11_PIN 5 //The data I/O pin connected to the DHT11 sensor : GPIO5 = D1 of NodeMCU ESP8266 Board
 
@@ -41,6 +43,12 @@ dht DHT;  //Creation de l'objet DHT
 LiquidCrystal_I2C lcd(0x3F,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
 
 WiFiServer server(80); // Create an instance of the server, specify the port to listen on as an argument
+
+// ThingSpeak
+WiFiClient  client;
+unsigned long myChannelNumber = 73956;
+const char * myWriteAPIKey = "50S0WGBDUG294NK5";
+unsigned long lastWriteThingSpeak = 0 ;
 
 // variable pour stocker valeur lue par sensor
 int humidity_DHT;
@@ -92,6 +100,7 @@ void setup() {
   Serial.println();
   Serial.println("Type,\tstatus,\tHumidity (%),\tTemperature (C)");
 
+  ThingSpeak.begin(client);
 }
 
 /***********  main, run repeatedly **************************************************/
@@ -189,6 +198,18 @@ void loop() {
     // The client will actually be disconnected
     // when the function returns and 'client' object is detroyed
   }
+
+  // Write to ThingSpeak
+  if( (millis()- lastWriteThingSpeak) > 20000) // ThingSpeak will only accept updates every 15 seconds.
+  {
+    lastWriteThingSpeak = millis();
+    ThingSpeak.setField(1,temperature_DHT);
+    ThingSpeak.setField(2,humidity_DHT);
+
+    // Write the fields that you've set all at once.
+    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
+  }
+  
 }
 
 /***********  for LED status  **************************************************/

@@ -27,7 +27,9 @@
 #include <WiFiManager.h> //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 
 #include <Wire.h> 
-#include <LiquidCrystal_I2C.h> //https://github.com/marcoschwartz/LiquidCrystal_I2C
+//#include <LiquidCrystal_I2C.h> //https://github.com/marcoschwartz/LiquidCrystal_I2C
+
+#include <Adafruit_BMP085.h> // Library for BMP180 "Adafruit_BMP085 library v1.0.0" 
 
 //for LED status
 #include <Ticker.h>
@@ -36,11 +38,11 @@ Ticker ticker;
 #include "ThingSpeak.h"
 
 /***********  Déclaration des CONSTANTES  *******************************************/
-#define DHT11_PIN 5 //The data I/O pin connected to the DHT11 sensor : GPIO5 = D1 of NodeMCU ESP8266 Board
+#define DHT11_PIN 0 //The data I/O pin connected to the DHT11 sensor : GPIO0 = D3 (for memory GPIO5 = D1) of NodeMCU ESP8266 Board
 
 /***********  Déclaration des variables globales  ***********************************/
 dht DHT;  //Creation de l'objet DHT
-LiquidCrystal_I2C lcd(0x3F,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
+//LiquidCrystal_I2C lcd(0x3F,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
 
 WiFiServer server(80); // Create an instance of the server, specify the port to listen on as an argument
 
@@ -54,6 +56,14 @@ unsigned long lastWriteThingSpeak = 0 ;
 int humidity_DHT;
 int temperature_DHT;
 
+// BMP180 SENSOR
+// Connect VCC of the BMP085 sensor to 3.3V (NOT 5.0V!)
+// Connect GND to Ground
+// Connect SCL to i2c clock - D1 on NodeMCU
+// Connect SDA to i2c data - D2 on NodeMCU
+
+Adafruit_BMP085 bmp180_sensor;
+
 /***********  setup, to run once  ***************************************************/
 void setup() {
   //On ouvre un connexion série pour le terminal
@@ -61,14 +71,14 @@ void setup() {
   Serial.println("Programme Station Meteo initialisée");
   Serial.println();
 
-  //LCD I2C Initialisation
+/*  //LCD I2C Initialisation
   Wire.begin(0,2); // LCD: SDA = D3(GPIO0) ; SCL = D4(GPIO2)
   lcd.init();                      // initialize the lcd 
   lcd.backlight();
   lcd.print("Station meteo");
   lcd.setCursor(2,1);
   lcd.print("demarrage ...");
-
+*/
   //set led pin as output
   pinMode(BUILTIN_LED, OUTPUT);
   // start ticker with 0.5 because we start in AP mode and try to connect
@@ -94,6 +104,10 @@ void setup() {
   server.begin();
   Serial.println("Server started");
   Serial.println();
+
+  if (!bmp180_sensor.begin()) {
+    Serial.println("Could not find a valid BMP180 sensor, check wiring!");
+  }
 
   Serial.print("DHTLib LIBRARY VERSION: ");
   Serial.println(DHT_LIB_VERSION);
@@ -131,17 +145,17 @@ void loop() {
   Serial.print(",\t");
   Serial.println(temperature_DHT, 1);
 
-  //Display on LCD I2C
+/*  //Display on LCD I2C
   lcd.setCursor(2,1);
   lcd.print(humidity_DHT);
   lcd.print("% ");
   lcd.print(temperature_DHT);
   lcd.print("C       ");
+  */
+  fct_bmp180(); // Display bmp180 information
   
-  delay(2000);
-
   // Check if a client has connected
-  WiFiClient client = server.available();
+  /*WiFiClient*/ client = server.available();
   if (client) {
     // Wait until the client sends some data
     Serial.println("new client");
@@ -209,7 +223,8 @@ void loop() {
     // Write the fields that you've set all at once.
     ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
   }
-  
+
+  delay(2000); // Wait 2 secondes before new loop
 }
 
 /***********  for LED status  **************************************************/
@@ -220,4 +235,36 @@ void tick()
   digitalWrite(BUILTIN_LED, !state);     // set pin to the opposite state
 }
 
+
+/***********  Display data of BMP180 sensor  **************************************************/
+void fct_bmp180()
+{
+    Serial.print("Temperature = ");
+    Serial.print(bmp180_sensor.readTemperature());
+    Serial.println(" *C");
+
+    Serial.print("Pressure = ");
+    Serial.print(bmp180_sensor.readPressure());
+    Serial.println(" Pa");
+    
+    // Calculate altitude assuming 'standard' barometric
+    // pressure of 1013.25 millibar = 101325 Pascal
+    Serial.print("Altitude = ");
+    Serial.print(bmp180_sensor.readAltitude());
+    Serial.println(" meters");
+
+    Serial.print("Pressure at sealevel (calculated) = ");
+    Serial.print(bmp180_sensor.readSealevelPressure());
+    Serial.println(" Pa");
+
+  // you can get a more precise measurement of altitude
+  // if you know the current sea level pressure which will
+  // vary with weather and such. If it is 1015 millibars
+  // that is equal to 101500 Pascals.
+    Serial.print("Real altitude = ");
+    Serial.print(bmp180_sensor.readAltitude(101500));
+    Serial.println(" meters");
+    
+    Serial.println();
+}
 

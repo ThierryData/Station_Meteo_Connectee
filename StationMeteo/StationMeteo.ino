@@ -89,6 +89,9 @@ void setup() {
 
   //WiFiManager
   WiFiManager wifiManager;
+  
+  wifiManager.setAPCallback(configModeCallback); //Use this if you need to do something when your device enters configuration mode on failed WiFi connection attempt.
+  
   //fetches ssid and pass from eeprom and tries to connect
   //if it does not connect it starts an access point with the specified name
   //here  "AutoConnect_StationMeteo"
@@ -282,4 +285,14 @@ void dotest()
     Serial.println("#      Detection entrée D4: 0,2794 mm de pluie     #");
     Serial.println("####################################################");
   }
+}
+
+/***********  Executed if device enters configuration mode on failed WiFi connection attempt **************************************************/
+void configModeCallback (WiFiManager *myWiFiManager) {
+  ticker.attach(0.2, tick);
+
+  Serial.println("Entered config mode");
+  Serial.println(WiFi.softAPIP());
+
+  Serial.println(myWiFiManager->getConfigPortalSSID());
 }

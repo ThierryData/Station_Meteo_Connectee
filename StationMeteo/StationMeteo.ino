@@ -56,6 +56,9 @@ unsigned long lastWriteThingSpeak = 0 ;
 int humidity_DHT;
 int temperature_DHT;
 
+// Variable antirebond pluviomètre
+unsigned long lastDetectionRainSensor = 0 ;
+
 // BMP180 SENSOR
 // Connect VCC of the BMP085 sensor to 3.3V (NOT 5.0V!)
 // Connect GND to Ground
@@ -115,6 +118,7 @@ void setup() {
   Serial.println("Type,\tstatus,\tHumidity (%),\tTemperature (C)");
 
   ThingSpeak.begin(client);
+  attachInterrupt(2,dotest,RISING); //Input D4
 }
 
 /***********  main, run repeatedly **************************************************/
@@ -268,3 +272,14 @@ void fct_bmp180()
     Serial.println();
 }
 
+/***********  test Interrup **************************************************/
+void dotest()
+{
+  if( (millis()- lastDetectionRainSensor) > 200) // Filtre antirebond: accept une detection uniquement toutes les 200ms
+  {
+    lastDetectionRainSensor = millis();
+    Serial.println("####################################################");
+    Serial.println("#      Detection entrée D4: 0,2794 mm de pluie     #");
+    Serial.println("####################################################");
+  }
+}

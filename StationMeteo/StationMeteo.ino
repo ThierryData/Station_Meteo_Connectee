@@ -55,9 +55,14 @@ unsigned long lastWriteThingSpeak = 0 ;
 // variable pour stocker valeur lue par sensor
 int humidity_DHT;
 int temperature_DHT;
+int currentTemperature;
 
 // Variable antirebond pluviomètre
 unsigned long lastDetectionRainSensor = 0 ;
+
+//Variable MIN MAX
+int MaxTemperature = -40;
+int MinTemperature = +80;
 
 // BMP180 SENSOR
 // Connect VCC of the BMP085 sensor to 3.3V (NOT 5.0V!)
@@ -148,15 +153,29 @@ void loop() {
   // DISPLAY DATA
   humidity_DHT = DHT.humidity;
   temperature_DHT = DHT.temperature;
+  currentTemperature = bmp180_sensor.readTemperature();
   Serial.print(humidity_DHT, 1);
-  Serial.print(",\t");
-  Serial.println(temperature_DHT, 1);
+  Serial.print("%,\t");
+  Serial.print(temperature_DHT, 1);
+  Serial.print("*C,\t bmp180: ");
+  Serial.println(currentTemperature, 1);
+  Serial.println("*C");
 
+  //Check if temperature MIN or MAX
+  if(MaxTemperature < currentTemperature)
+  {
+    MaxTemperature = currentTemperature;
+  }
+  if(MinTemperature > currentTemperature)
+  {
+    MinTemperature = currentTemperature;
+  }
+  
 /*  //Display on LCD I2C
   lcd.setCursor(2,1);
   lcd.print(humidity_DHT);
   lcd.print("% ");
-  lcd.print(temperature_DHT);
+  lcd.print(currentTemperature);
   lcd.print("C       ");
   */
   fct_bmp180(); // Display bmp180 information
@@ -181,6 +200,10 @@ void loop() {
     else if (req.indexOf("/off") != -1) {
       digitalWrite(LED_BUILTIN, HIGH);
     }
+    else if (req.indexOf("/reset") != -1) { //Reset request
+      MaxTemperature = currentTemperature;
+      MinTemperature = currentTemperature;
+    }
 
     client.flush();
 
@@ -197,19 +220,25 @@ void loop() {
     s += humidity_DHT;
     s += " %  ";
     s += temperature_DHT;
-    s += " C";
+    s += " C ";
+    s += "MIN = ";
+    s += MinTemperature;
+    s += "MAX = ";
+    s += MaxTemperature;
     s += "</p><br/>";
     s += "<div class=\"row\">";
     s += "<div class=\"row\">";
     s += "<div class=\"row\">";
     s += "<div class=\"col-xs-6\"><input class=\"btn btn-block btn-lg btn-primary\" type=\"button\" value=\"On\" onclick=\"on()\"></div>";
     s += "<div class=\"col-xs-6\"><input class=\"btn btn-block btn-lg btn-danger\" type=\"button\" value=\"Off\" onclick=\"off()\"></div>";
+    s += "<div class=\"col-xs-6\"><input class=\"btn btn-block btn-lg btn-danger\" type=\"button\" value=\"Reset\" onclick=\"reset()\"></div>";
     s += "</div>";
     s += "<div class=\"row\">";
     s += "</div></div>";
     s += "<script>function Refresh() {$.get(\"/refresh\");setTimeout(reloadpage, 500);}</script>";
     s += "<script>function on() {$.get(\"/on\");}</script>";
     s += "<script>function off() {$.get(\"/off\");}</script>";
+    s += "<script>function reset() {$.get(\"/reset\");}</script>";
 
     // Send the response to the client
     client.print(s);
@@ -224,7 +253,7 @@ void loop() {
   if( (millis()- lastWriteThingSpeak) > 20000) // ThingSpeak will only accept updates every 15 seconds.
   {
     lastWriteThingSpeak = millis();
-    ThingSpeak.setField(1,temperature_DHT);
+    ThingSpeak.setField(1,currentTemperature);
     ThingSpeak.setField(2,humidity_DHT);
 
     // Write the fields that you've set all at once.
@@ -289,7 +318,7 @@ void dotest()
 
 /***********  Executed if device enters configuration mode on failed WiFi connection attempt **************************************************/
 void configModeCallback (WiFiManager *myWiFiManager) {
-  ticker.attach(0.2, tick);
+  ticker.attach(0.1, tick);
 
   Serial.println("Entered config mode");
   Serial.println(WiFi.softAPIP());

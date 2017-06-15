@@ -51,6 +51,7 @@ WiFiClient  client;
 unsigned long myChannelNumber = 73956;
 const char * myWriteAPIKey = "50S0WGBDUG294NK5";
 unsigned long lastWriteThingSpeak = 0 ;
+unsigned long delaySendThingSpeak = 60000; // 60s - ThingSpeak will only accept updates every 15 seconds.
 
 // variable pour stocker valeur lue par sensor
 int humidity_DHT;
@@ -158,7 +159,7 @@ void loop() {
   Serial.print("%,\t");
   Serial.print(temperature_DHT, 1);
   Serial.print("*C,\t bmp180: ");
-  Serial.println(currentTemperature, 1);
+  Serial.print(currentTemperature, 1);
   Serial.println("*C");
 
   //Check if temperature MIN or MAX
@@ -250,7 +251,7 @@ void loop() {
   }
 
   // Write to ThingSpeak
-  if( (millis()- lastWriteThingSpeak) > 20000) // ThingSpeak will only accept updates every 15 seconds.
+  if( (millis()- lastWriteThingSpeak) > delaySendThingSpeak) // ThingSpeak will only accept updates every 15 seconds.
   {
     lastWriteThingSpeak = millis();
     ThingSpeak.setField(1,currentTemperature);

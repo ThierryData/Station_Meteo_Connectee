@@ -53,19 +53,19 @@ WiFiClient  client;
 unsigned long myChannelNumber = 73956;
 const char * myWriteAPIKey = "50S0WGBDUG294NK5";
 unsigned long lastWriteThingSpeak = 0 ;
-unsigned long delaySendThingSpeak = 60000; // 60s - ThingSpeak will only accept updates every 15 seconds.
+unsigned long delaySendThingSpeak = 300000; // 300s - ThingSpeak will only accept updates every 15 seconds.
 
 // variable pour stocker valeur lue par sensor
 int humidity_DHT;
 int temperature_DHT;
-int currentTemperature;
+float currentTemperature;
 
 // Variable antirebond pluviomètre
 unsigned long lastDetectionRainSensor = 0 ;
 
 //Variable MIN MAX
-int MaxTemperature = -40;
-int MinTemperature = +80;
+float MaxTemperature = -40;
+float MinTemperature = +80;
 
 // BMP180 SENSOR
 // Connect VCC of the BMP085 sensor to 3.3V (NOT 5.0V!)
@@ -218,9 +218,15 @@ void loop() {
       }
       Serial.println(epoch % 60); // print the second
 
+      //Reset Max temperature at 24H00
       if((((epoch  % 86400L) / 3600) == 0) && (lastHours == 23))
       {
-        resetMinMax();
+        resetMax();
+      }
+      //Reset Min temperature at 12H00
+      if((((epoch  % 86400L) / 3600) == 12) && (lastHours == 11))
+      {
+        resetMin();
       }
       lastHours = (epoch  % 86400L) / 3600;
     }   
@@ -455,9 +461,12 @@ unsigned long sendNTPpacket(IPAddress& address)
 }
 
 /***********  Reset temperature Min Max **************************************************/
-void resetMinMax()
+void resetMax()
 {
   MaxTemperature = currentTemperature;
+}
+void resetMin()
+{
   MinTemperature = currentTemperature;
 }
 

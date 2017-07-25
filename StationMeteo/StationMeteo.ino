@@ -68,11 +68,14 @@ unsigned long delaySendThingSpeak = 300000; // 300s - ThingSpeak will only accep
 
 // variable pour stocker valeur lue par sensor
 int humidity_DHT;
+int Last_humidity_DHT;
 int temperature_DHT;
 float currentTemperature;
 
-// Variable antirebond pluviomètre
-unsigned long lastDetectionRainSensor = 0 ;
+//Variable pluviomètre
+unsigned long lastDetectionRainSensor = 0 ; // Variable antirebond 
+boolean detection_Pluie = false;
+float pluie_mm = 0; 
 
 //Variable MIN MAX
 float MaxTemperature = -40;
@@ -159,7 +162,7 @@ void setup() {
   Serial.println("Type,\tstatus,\tHumidity (%),\tTemperature (C)");
 
   ThingSpeak.begin(client);
-  attachInterrupt(2,dotest,RISING); //Input D4
+  attachInterrupt(2,interruption_Pluie,RISING); //Input D4
 
   //Pour récupérer date et heure
   Serial.println("Starting UDP");
@@ -232,11 +235,17 @@ void loop() {
       //Reset Max temperature at 24H00
       if((((epoch  % 86400L) / 3600) == 0) && (lastHours == 23))
       {
+        ThingSpeak.setField(4,MaxTemperature);
+        ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
         resetMax();
+        // reset pluie
+        pluie_mm = 0;
       }
       //Reset Min temperature at 12H00
       if((((epoch  % 86400L) / 3600) == 12) && (lastHours == 11))
       {
+        ThingSpeak.setField(3,MinTemperature);
+        ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
         resetMin();
       }
       lastHours = (epoch  % 86400L) / 3600;
@@ -262,7 +271,14 @@ void loop() {
       break;
   }
 
-  humidity_DHT = DHT.humidity;
+  //filtre les valeurs erronées
+  int read_humidity = DHT.humidity;
+  if (Last_humidity_DHT == read_humidity)
+  {
+    humidity_DHT = read_humidity;
+  }
+  Last_humidity_DHT = read_humidity;
+  
   temperature_DHT = DHT.temperature;
   currentTemperature = bmp180_sensor.readTemperature();
 
@@ -373,14 +389,23 @@ void loop() {
     lastWriteThingSpeak = millis();
     ThingSpeak.setField(1,currentTemperature);
     ThingSpeak.setField(2,humidity_DHT);
-    ThingSpeak.setField(3,MinTemperature);
-    ThingSpeak.setField(4,MaxTemperature);
 
     // Write the fields that you've set all at once.
     ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
   }
 
   delay(10000); // Wait 10 secondes before new loop
+
+  //L'interruption de détection de pluie a été enclencé
+  if(detection_Pluie)
+  {
+    Serial.println("####################################################");
+    Serial.println("#      Detection entrée D4: 0,2794 mm de pluie     #");
+    Serial.println("####################################################");
+    pluie_mm = pluie_mm + 0,2794;
+    ThingSpeak.setField(5,pluie_mm);
+    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
+  }
 }
 
 /***********  for LED status  **************************************************/
@@ -425,14 +450,12 @@ void fct_bmp180()
 }
 
 /***********  test Interrup **************************************************/
-void dotest()
+void interruption_Pluie()
 {
   if( (millis()- lastDetectionRainSensor) > 200) // Filtre antirebond: accept une detection uniquement toutes les 200ms
   {
     lastDetectionRainSensor = millis();
-    Serial.println("####################################################");
-    Serial.println("#      Detection entrée D4: 0,2794 mm de pluie     #");
-    Serial.println("####################################################");
+    detection_Pluie = false;
   }
 }
 

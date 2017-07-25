@@ -39,6 +39,9 @@ Ticker ticker;
 
 #include "ThingSpeak.h"
 
+/***********  Déclaration des CONSTANTES COMPILATION *******************************************/
+#define TEST true 
+
 /***********  Déclaration des CONSTANTES  *******************************************/
 #define DHT11_PIN 0 //The data I/O pin connected to the DHT11 sensor : GPIO0 = D3 (for memory GPIO5 = D1) of NodeMCU ESP8266 Board
 
@@ -50,8 +53,16 @@ WiFiServer server(80); // Create an instance of the server, specify the port to 
 
 // ThingSpeak
 WiFiClient  client;
-unsigned long myChannelNumber = 73956;
-const char * myWriteAPIKey = "50S0WGBDUG294NK5";
+if (TEST){
+  unsigned long myChannelNumber = 73956; //Thermomètre 
+  const char * myWriteAPIKey = "50S0WGBDUG294NK5";
+}else
+{
+  unsigned long myChannelNumber = 290841; //Station Météo
+  const char * myWriteAPIKey = "QHAVPLJB3C55CSCD";
+}
+
+
 unsigned long lastWriteThingSpeak = 0 ;
 unsigned long delaySendThingSpeak = 300000; // 300s - ThingSpeak will only accept updates every 15 seconds.
 

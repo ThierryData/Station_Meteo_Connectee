@@ -40,7 +40,7 @@ Ticker ticker;
 #include "ThingSpeak.h"
 
 /***********  Déclaration des CONSTANTES COMPILATION *******************************************/
-#define TEST false 
+#define MODE_TEST false 
 
 /***********  Déclaration des CONSTANTES  *******************************************/
 #define DHT11_PIN 0 //The data I/O pin connected to the DHT11 sensor : GPIO0 = D3 (for memory GPIO5 = D1) of NodeMCU ESP8266 Board
@@ -53,12 +53,14 @@ WiFiServer server(80); // Create an instance of the server, specify the port to 
 
 // ThingSpeak
 WiFiClient  client;
-#if defined(TEST)
+#if MODE_TEST == true
   unsigned long myChannelNumber = 73956; //Thermomètre 
   const char * myWriteAPIKey = "50S0WGBDUG294NK5";
+  boolean test_init = true;
 #else
   unsigned long myChannelNumber = 290841; //Station Météo
   const char * myWriteAPIKey = "QHAVPLJB3C55CSCD";
+  boolean test_init = false;
 #endif
 
 
@@ -112,6 +114,9 @@ void setup() {
   //On ouvre un connexion série pour le terminal
   Serial.begin(115200);
   Serial.println("Programme Station Meteo initialisée");
+  Serial.println();
+  Serial.print("Mode test = ");
+  Serial.print(test_init);
   Serial.println();
 
 /*  //LCD I2C Initialisation
@@ -235,6 +240,7 @@ void loop() {
       if((((epoch  % 86400L) / 3600) == 0) && (lastHours == 23))
       {
         ThingSpeak.setField(4,MaxTemperature);
+        ThingSpeak.setField(8,pluie_mm); //cumul de pluie
         ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
         resetMax();
         // reset pluie
@@ -388,23 +394,27 @@ void loop() {
     lastWriteThingSpeak = millis();
     ThingSpeak.setField(1,currentTemperature);
     ThingSpeak.setField(2,humidity_DHT);
+    ThingSpeak.setField(6,MinTemperature);
+    ThingSpeak.setField(7,MaxTemperature);
 
     // Write the fields that you've set all at once.
     ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
   }
 
-  delay(10000); // Wait 10 secondes before new loop
-
   //L'interruption de détection de pluie a été enclencé
   if(detection_Pluie)
   {
     Serial.println("####################################################");
-    Serial.println("#      Detection entrée D4: 0,2794 mm de pluie     #");
+    Serial.println("#      Detection entrée D4: 0.2794 mm de pluie     #");
     Serial.println("####################################################");
-    pluie_mm = pluie_mm + 0,2794;
+    pluie_mm = pluie_mm + 0.2794;
     ThingSpeak.setField(5,pluie_mm);
-    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
+    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+    detection_Pluie = false;  
   }
+
+  delay(10000); // Wait 10 secondes before new loop
+
 }
 
 /***********  for LED status  **************************************************/
@@ -454,7 +464,7 @@ void interruption_Pluie()
   if( (millis()- lastDetectionRainSensor) > 200) // Filtre antirebond: accept une detection uniquement toutes les 200ms
   {
     lastDetectionRainSensor = millis();
-    detection_Pluie = false;
+    detection_Pluie = true;
   }
 }
 

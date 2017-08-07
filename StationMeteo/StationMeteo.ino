@@ -241,7 +241,7 @@ void loop() {
       {
         ThingSpeak.setField(4,MaxTemperature);
         ThingSpeak.setField(8,pluie_mm); //cumul de pluie
-        ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
+//        ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
         resetMax();
         // reset pluie
         pluie_mm = 0;
@@ -250,7 +250,7 @@ void loop() {
       if((((epoch  % 86400L) / 3600) == 12) && (lastHours == 11))
       {
         ThingSpeak.setField(3,MinTemperature);
-        ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
+//        ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
         resetMin();
       }
       lastHours = (epoch  % 86400L) / 3600;
@@ -396,21 +396,19 @@ void loop() {
     ThingSpeak.setField(2,humidity_DHT);
     ThingSpeak.setField(6,MinTemperature);
     ThingSpeak.setField(7,MaxTemperature);
+    //L'interruption de détection de pluie a été enclencé
+    if(detection_Pluie)
+    {
+      Serial.println("####################################################");
+      Serial.println("#      Detection entrée D4: 0.2794 mm de pluie     #");
+      Serial.println("####################################################");
+      pluie_mm = pluie_mm + 0.2794;
+      detection_Pluie = false;  
+      ThingSpeak.setField(5,pluie_mm);
+    }
 
     // Write the fields that you've set all at once.
     ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
-  }
-
-  //L'interruption de détection de pluie a été enclencé
-  if(detection_Pluie)
-  {
-    Serial.println("####################################################");
-    Serial.println("#      Detection entrée D4: 0.2794 mm de pluie     #");
-    Serial.println("####################################################");
-    pluie_mm = pluie_mm + 0.2794;
-    ThingSpeak.setField(5,pluie_mm);
-    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
-    detection_Pluie = false;  
   }
 
   delay(10000); // Wait 10 secondes before new loop

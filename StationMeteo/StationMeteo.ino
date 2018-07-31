@@ -16,6 +16,7 @@
 
   Version / Date / Commentaire / Auteur
         0.01 / 03-01-2017 / Version initial
+        1.00 / 31/07/2018 / Version avec verification validité température
 *************************************************************************************/
 
 /***********  Ajout de bibliothèque  ************************************************/
@@ -72,13 +73,14 @@ int humidity_DHT;
 int Last_humidity_DHT;
 int temperature_DHT;
 float currentTemperature;
+float LastCurrentTemperature;
 
 //Variable pluviomètre
 unsigned long lastDetectionRainSensor = 0 ; // Variable antirebond 
 boolean detection_Pluie = false;
 float pluie_mm = 0; 
 
-//Variable MIN MAX
+//Variable Temperature MIN MAX
 float MaxTemperature = -40;
 float MinTemperature = +80;
 
@@ -89,6 +91,12 @@ float MinTemperature = +80;
 // Connect SDA to i2c data - D2 on NodeMCU
 
 Adafruit_BMP085 bmp180_sensor;
+
+//Variable de vérification validité température
+float Temperature_BMP_ValeurValideMIN = -30;
+float Temperature_BMP_ValeurValideMAX = 60;
+int Invalid_Value_Temp_Count = 0;
+int Invalid_Value_Temp_Count_Total = 0;
 
 //Variable pour récupération de l'heure par serveur basé sur l'exemple Udp NTP Client
 unsigned int localPort = 2390;      // local port to listen for UDP packets
@@ -285,7 +293,25 @@ void loop() {
   Last_humidity_DHT = read_humidity;
   
   temperature_DHT = DHT.temperature;
-  currentTemperature = bmp180_sensor.readTemperature();
+  
+  int readTemp = bmp180_sensor.readTemperature();
+  //vérification validité température lue
+  if( readTemp > Temperature_BMP_ValeurValideMIN && readTemp < Temperature_BMP_ValeurValideMAX)
+  {
+    Invalid_Value_Temp_Count = 0;  
+    
+    if (readTemp == LastCurrentTemperature) // deux lectures sucessive valide pour retenir la valeur
+    {
+      currentTemperature = readTemp;
+    }
+    LastCurrentTemperature = readTemp;
+  }
+  else
+  {
+    Invalid_Value_Temp_Count_Total++;
+    Invalid_Value_Temp_Count++;
+  }
+  
 
   //Check if temperature MIN or MAX
   if(MaxTemperature < currentTemperature)
@@ -360,10 +386,14 @@ void loop() {
     s += " %  ";
     s += temperature_DHT;
     s += " C ";
-    s += "MIN = ";
+    s += " MIN = ";
     s += MinTemperature;
-    s += "MAX = ";
+    s += " MAX = ";
     s += MaxTemperature;
+    s += " Invalid_Value_Temp_Count = ";
+    s += Invalid_Value_Temp_Count;
+    s += " Invalid_Value_Temp_Count_Total = ";
+    s += Invalid_Value_Temp_Count_Total;
     s += "</p><br/>";
     s += "<div class=\"row\">";
     s += "<div class=\"row\">";

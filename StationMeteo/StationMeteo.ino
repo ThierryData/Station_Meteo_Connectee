@@ -294,7 +294,7 @@ void loop() {
   
   temperature_DHT = DHT.temperature;
   
-  int readTemp = bmp180_sensor.readTemperature();
+  float readTemp = bmp180_sensor.readTemperature();
   //vérification validité température lue
   if( readTemp > Temperature_BMP_ValeurValideMIN && readTemp < Temperature_BMP_ValeurValideMAX)
   {
@@ -303,6 +303,15 @@ void loop() {
     if (readTemp == LastCurrentTemperature) // deux lectures sucessive valide pour retenir la valeur
     {
       currentTemperature = readTemp;
+      //Check if temperature MIN or MAX
+      if(MaxTemperature < currentTemperature)
+      {
+        MaxTemperature = currentTemperature;
+      }
+      if(MinTemperature > currentTemperature)
+      {
+        MinTemperature = currentTemperature;
+      }
     }
     LastCurrentTemperature = readTemp;
   }
@@ -312,17 +321,6 @@ void loop() {
     Invalid_Value_Temp_Count++;
   }
   
-
-  //Check if temperature MIN or MAX
-  if(MaxTemperature < currentTemperature)
-  {
-    MaxTemperature = currentTemperature;
-  }
-  if(MinTemperature > currentTemperature)
-  {
-    MinTemperature = currentTemperature;
-  }
-
   // DISPLAY DATA
   Serial.print(humidity_DHT, 1);
   Serial.print("%,\t");

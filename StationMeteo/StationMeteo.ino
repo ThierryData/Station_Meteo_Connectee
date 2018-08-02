@@ -60,7 +60,9 @@ WiFiClient  client;
   boolean test_init = true;
 #else
   unsigned long myChannelNumber = 290841; //Station Météo
+  unsigned long myChannelNumber2 = 552449; //Station Météo Bis
   const char * myWriteAPIKey = "QHAVPLJB3C55CSCD";
+  const char * myWriteAPIKey2 = "E6VANGUASECY41Q2";
   boolean test_init = false;
 #endif
 
@@ -80,9 +82,11 @@ unsigned long lastDetectionRainSensor = 0 ; // Variable antirebond
 boolean detection_Pluie = false;
 float pluie_mm = 0; 
 
-//Variable Temperature MIN MAX
+//Variable Temperature MIN MAX MOY
 float MaxTemperature = -40;
 float MinTemperature = +80;
+float TemperatureMoy = 0;
+int NbreTempMoy = 0;
 
 // BMP180 SENSOR
 // Connect VCC of the BMP085 sensor to 3.3V (NOT 5.0V!)
@@ -247,9 +251,14 @@ void loop() {
       //Reset Max temperature at 24H00
       if((((epoch  % 86400L) / 3600) == 0) && (lastHours == 23))
       {
-        ThingSpeak.setField(4,MaxTemperature);
-        ThingSpeak.setField(8,pluie_mm); //cumul de pluie
-//        ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
+        ThingSpeak.setField(2,MaxTemperature);
+        ThingSpeak.setField(3,TemperatureMoy/NbreTempMoy);
+        ThingSpeak.setField(4,NbreTempMoy);
+//        ThingSpeak.setField(8,pluie_mm); //cumul de pluie
+        ThingSpeak.writeFields(myChannelNumber2, myWriteAPIKey2);  
+        
+        TemperatureMoy = 0;
+        NbreTempMoy = 0;
         resetMax();
         // reset pluie
         pluie_mm = 0;
@@ -257,8 +266,8 @@ void loop() {
       //Reset Min temperature at 12H00
       if((((epoch  % 86400L) / 3600) == 12) && (lastHours == 11))
       {
-        ThingSpeak.setField(3,MinTemperature);
-//        ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);  
+        ThingSpeak.setField(1,MinTemperature);
+        ThingSpeak.writeFields(myChannelNumber2, myWriteAPIKey2);  
         resetMin();
       }
       lastHours = (epoch  % 86400L) / 3600;
@@ -303,6 +312,9 @@ void loop() {
     if (readTemp == LastCurrentTemperature) // deux lectures sucessive valide pour retenir la valeur
     {
       currentTemperature = readTemp;
+      TemperatureMoy = TemperatureMoy + currentTemperature;
+      NbreTempMoy++;
+      
       //Check if temperature MIN or MAX
       if(MaxTemperature < currentTemperature)
       {
